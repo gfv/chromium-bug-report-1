@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+    <script>
+        var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        var gainer = audioCtx.createGain();
+        gainer.gain.value = 0.1;
+        gainer.connect(audioCtx.destination);
+
+        var compressor = audioCtx.createDynamicsCompressor();
+
+        compressor.threshold.value = 0;
+        compressor.knee.value = 0;
+        compressor.ratio.value = 20;
+        compressor.attack.value = 0;
+        compressor.release.value = 2;
+
+        compressor.connect(gainer);
+
+        playCount = 0;
+        
+        var sounds = ['geiger-click.wav'];
+
+        var soundsLoaded = 0;
+        var soundBuffers = [];
+        var requests = [];
+
+        for (i = 0; i < sounds.length; i++) {
+            requests[i] = new XMLHttpRequest();
+            requests[i].open('GET', sounds[i], true);
+            requests[i].responseType = 'arraybuffer';
+
+            requests[i].onload = (function (k) { return function () {
+                console.log ('sound ' + sounds[k] + ' loaded');
+                var data = requests[k].response;
+                audioCtx.decodeAudioData(data, (function (j) { return function (buffer) {
+                    console.log ('audio ' + sounds[j] + ' decoded');
+                    soundBuffers[j] = buffer;
+                    soundsLoaded = soundsLoaded + 1;
+                }})(k));
+            }})(i);
+            requests[i].send();
+        }
+
+
+        function playSound() {
+            if (soundsLoaded < sounds.length) return;
+
+            var source = audioCtx.createBufferSource();
+            source.buffer = soundBuffers[getRandomInt(0, sounds.length)];
+            source.connect(compressor);
+            source.start();
+
+            playCount = playCount + 1;
+        }
+
+        function getRandomInt(min, max)
+        {
+          return Math.floor(Math.random() * (max - min)) + min;
+        }
+
+        function repeated(f, timeout) {
+            f();
+            setTimeout(function () { repeated(f, timeout); }, timeout);
+        }
+
+        function run() {
+            repeated(playSound, getRandomInt(100, 2000));
+        }
+
+        function run2() {
+          low = parseFloat(document.getElementById("timeout_min").value);
+          high = parseFloat(document.getElementById("timeout_max").value);
+          repeated(playSound, getRandomInt(low, high));
+        }
+
+        function set(t) {
+            v = parseFloat(document.getElementById(t).value);
+            if (t == 'gain') {
+                gainer.gain.value = v;
+                return;
+            }
+            compressor[t].value = v;
+        }
+
+        function updatePC() {
+            lastval = parseInt(document.getElementById('count').innerHTML);
+            document.getElementById('count').innerHTML = playCount;
+            document.getElementById('persecond').innerHTML = (playCount - lastval) * 10;
+            document.getElementById('reduction').innerHTML = compressor.reduction.value;
+        }
+    </script>
+
+
+    <button type="button" onclick="run()">Play</button>
+    <label for="timeout_min">timeout_min: </label><input type="text" value="200" id="timeout_min" />
+    <label for="timeout_max">timeout_max: </label><input type="text" value="1000" id="timeout_max" />
+    <button type="button" onclick="run2()">run with specified timeouts</button>
+    <br />
+    <div id="count">0</div>
+    <div id="persecond">0</div>
+    <div id="reduction">0</div>
+    <br />
+    <label for="threshold">threshold: </label><input type="text" id="threshold" /><button type="button" onclick="set('threshold')">set</button><br />
+    <label for="knee">knee: </label><input type="text" id="knee" /><button type="button" onclick="set('knee')">set</button><br />
+    <label for="ratio">ratio: </label><input type="text" id="ratio" /><button type="button" onclick="set('ratio')">set</button><br />
+    <label for="attack">attack: </label><input type="text" id="attack" /><button type="button" onclick="set('attack')">set</button><br />
+    <label for="release">release: </label><input type="text" id="release" /><button type="button" onclick="set('release')">set</button><br />
+    <label for="gain">final gain: </label><input type="text" id="gain" /><button type="button" onclick="set('gain')">set</button><br />
+
+    <script>
+        repeated (updatePC, 100);
+    </script>
+</html>
