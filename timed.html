@@ -92,6 +92,7 @@
     </script>
 
 
+
     <button type="button" onclick="run()">Play</button>
     <label for="timeout_min">timeout_min: </label><input type="text" value="200" id="timeout_min" /><br/>
     <label for="timeout_max">timeout_max: </label><input type="text" value="1000" id="timeout_max" /><br />
@@ -110,5 +111,16 @@
 
     <script>
         repeated (updatePC, 100);
+    </script>
+
+    <script>
+      var z = window.location.hash.slice(1).split(";");
+      if (z.length >= 3) {
+        document.getElementById("timeout_min").value = z[0];
+        document.getElementById("timeout_max").value = z[1];
+         for (var i = 0; i < parseInt(z[2]); i++) {
+           setTimeout(run, getRandomInt(10, 1000));
+         }
+      }
     </script>
 </html>
